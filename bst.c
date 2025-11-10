@@ -1,216 +1,233 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> 
 
-#define WORD_SIZE 50
-#define MEANING_SIZE 100
-
-// ---------- Structure Definition ----------
 typedef struct Node {
-    char keyword[WORD_SIZE];
-    char meaning[MEANING_SIZE];
-    struct Node *left, *right;
+    char keyword[50];    
+    char meaning[255];    
+    struct Node* left;
+    struct Node* right;
 } Node;
 
-// ---------- Queue for Level-wise Display ----------
-#define SIZE 100
-Node* queue[SIZE];
-int front = -1, rear = -1;
-
-void enqueue(Node* node) {
-    if (rear < SIZE - 1) {
-        if (front == -1) front = 0;
-        queue[++rear] = node;
-    }
-}
-
-Node* dequeue() {
-    if (front == -1 || front > rear) return NULL;
-    return queue[front++];
-}
-
-int isQueueEmpty() {
-    return (front == -1 || front > rear);
-}
-
-// ---------- Create New Node ----------
-Node* createNode(char key[], char mean[]) {
+Node* createNode(const char* keyword, const char* meaning) {
     Node* newNode = (Node*)malloc(sizeof(Node));
-    strcpy(newNode->keyword, key);
-    strcpy(newNode->meaning, mean);
+    if (!newNode) {
+        printf("Memory allocation error\n");
+        return NULL;
+    }
+    strcpy(newNode->keyword, keyword);
+    strcpy(newNode->meaning, meaning);
     newNode->left = newNode->right = NULL;
     return newNode;
 }
 
-// ---------- Insert Keyword ----------
-Node* insert(Node* root, char key[], char mean[]) {
-    if (root == NULL) return createNode(key, mean);
+Node* create_tree() {
+    char keyword[50];
+    char meaning[255];
 
-    int cmp = strcmp(key, root->keyword);
-    if (cmp < 0)
-        root->left = insert(root->left, key, mean);
-    else if (cmp > 0)
-        root->right = insert(root->right, key, mean);
-    else
-        printf("Keyword '%s' already exists!\n", key);
+    printf("Enter keyword (or @ to stop): ");
+    scanf("%s", keyword);
 
-    return root;
-}
-
-// ---------- Find Minimum (for deletion) ----------
-Node* findMin(Node* root) {
-    while (root && root->left != NULL)
-        root = root->left;
-    return root;
-}
-
-// ---------- Delete Keyword ----------
-Node* delete(Node* root, char key[]) {
-    if (root == NULL) {
-        printf("Keyword not found!\n");
-        return root;
+    if (strcmp(keyword, "@") == 0) {
+        return NULL;  
     }
 
-    int cmp = strcmp(key, root->keyword);
-    if (cmp < 0)
-        root->left = delete(root->left, key);
-    else if (cmp > 0)
-        root->right = delete(root->right, key);
-    else {
-        // Node found
-        if (root->left == NULL) {
+    printf("Enter meaning: ");
+    getchar();  
+    fgets(meaning, sizeof(meaning), stdin);
+
+    
+    meaning[strcspn(meaning, "\n")] = '\0';
+
+    Node* root = createNode(keyword, meaning);
+
+    printf("Enter left child of %s:\n", keyword);
+    root->left = create_tree();
+
+    printf("Enter right child of %s:\n", keyword);
+    root->right = create_tree();
+
+    return root;
+}
+
+Node* findMin(Node* root) {
+    while (root && root->left != NULL) {
+        root = root->left;
+    }
+    return root;
+}
+
+Node* delete_node(Node* root, const char* keyword) {
+    if (root == NULL) {
+        return NULL;
+    }
+
+    int cmp = strcmp(keyword, root->keyword);
+
+    if (cmp < 0) {
+        
+        root->left = delete_node(root->left, keyword);
+    } else if (cmp > 0) {
+        
+        root->right = delete_node(root->right, keyword);
+    } else {
+        
+
+        // Case 1: No child
+        if (root->left == NULL && root->right == NULL) {
+            free(root);
+            return NULL;
+        }
+        // Case 2: One child (right)
+        else if (root->left == NULL) {
             Node* temp = root->right;
             free(root);
             return temp;
-        } else if (root->right == NULL) {
+        }
+        // Case 2: One child (left)
+        else if (root->right == NULL) {
             Node* temp = root->left;
             free(root);
             return temp;
-        } else {
-            Node* temp = findMin(root->right);
+        }
+        // Case 3: Two children
+        else {
+            Node* temp = findMin(root->right);  // Find inorder successor
             strcpy(root->keyword, temp->keyword);
             strcpy(root->meaning, temp->meaning);
-            root->right = delete(root->right, temp->keyword);
+            root->right = delete_node(root->right, temp->keyword);
         }
     }
     return root;
 }
 
-// ---------- Copy Tree ----------
-Node* copyTree(Node* root) {
-    if (root == NULL) return NULL;
-    Node* newNode = createNode(root->keyword, root->meaning);
-    newNode->left = copyTree(root->left);
-    newNode->right = copyTree(root->right);
-    return newNode;
+
+void print_tree(Node* root) {
+    if (root == NULL) return;
+    print_tree(root->left);
+    printf("%s: %s\n", root->keyword, root->meaning);
+    print_tree(root->right);
 }
 
-// ---------- Create Mirror Image ----------
-Node* mirror(Node* root) {
+Node* insert(Node* root, const char* keyword, const char* meaning) {
+    if (root == NULL) {
+        return createNode(keyword, meaning);
+    }
+    int cmp = strcmp(keyword, root->keyword);
+    if (cmp < 0) {
+        root->left = insert(root->left, keyword, meaning);
+    } else if (cmp > 0) {
+        root->right = insert(root->right, keyword, meaning);
+    } else {
+        strcpy(root->meaning, meaning);  // update meaning if keyword exists
+    }
+    return root;
+}
+
+char* search(Node* root, const char* keyword) {
     if (root == NULL) return NULL;
+    int cmp = strcmp(keyword, root->keyword);
+    if (cmp == 0) return root->meaning;
+    else if (cmp < 0) return search(root->left, keyword);
+    else return search(root->right, keyword);
+}
+
+void mirrortree(Node* root){
+    if(root == NULL){
+        return;
+    }
     Node* temp = root->left;
     root->left = root->right;
     root->right = temp;
-    mirror(root->left);
-    mirror(root->right);
-    return root;
+    mirrortree(root->left);
+    mirrortree(root->right);
 }
 
-// ---------- Level-wise Display ----------
-void displayLevelWise(Node* root) {
-    if (root == NULL) {
-        printf("Tree is empty.\n");
-        return;
-    }
-
-    front = rear = -1;
-    enqueue(root);
-    printf("\nLevel-wise display:\n");
-
-    while (!isQueueEmpty()) {
-        int count = rear - front + 1; // nodes in current level
-        while (count--) {
-            Node* curr = dequeue();
-            printf("[%s : %s]  ", curr->keyword, curr->meaning);
-            if (curr->left) enqueue(curr->left);
-            if (curr->right) enqueue(curr->right);
-        }
-        printf("\n");
-    }
+Node* copy_tree(Node* root) {
+    if (root == NULL)
+        return NULL;
+    Node* newNode = createNode(root->keyword, root->meaning);
+    newNode->left = copy_tree(root->left);
+    newNode->right = copy_tree(root->right);
+    return newNode;
 }
 
-// ---------- Inorder Display (sorted order) ----------
-void inorder(Node* root) {
-    if (root == NULL) return;
-    inorder(root->left);
-    printf("%s : %s\n", root->keyword, root->meaning);
-    inorder(root->right);
-}
-
-// ---------- Main Function ----------
 int main() {
     Node* root = NULL;
-    Node* copiedTree = NULL;
     int choice;
-    char key[WORD_SIZE], mean[MEANING_SIZE];
+    char keyword[50];
+    char meaning[255];
 
     do {
-        printf("\n========= Dictionary Menu =========\n");
-        printf("1. Insert Keyword\n");
-        printf("2. Delete Keyword\n");
-        printf("3. Display Dictionary (Inorder)\n");
-        printf("4. Create Mirror Image and Display\n");
-        printf("5. Copy Dictionary\n");
-        printf("6. Display Level-wise\n");
-        printf("0. Exit\n");
-        printf("Enter choice: ");
+        printf("\n--- Dictionary Menu ---\n");
+        printf("1. Create dictionary tree\n");
+        printf("2. Insert keyword\n");
+        printf("3. Delete keyword\n");
+        printf("4. Search keyword\n");
+        printf("5. Print dictionary\n");
+        printf("6. Mirror image\n");    // Added newline
+        printf("7. Exit\n");
+    
+        printf("Enter your choice: ");
         scanf("%d", &choice);
-        getchar(); // consume newline
-
+        getchar();  
+    
         switch (choice) {
             case 1:
-                printf("Enter keyword: ");
-                scanf("%s", key);
-                printf("Enter meaning: ");
-                scanf(" %[^\n]", mean);
-                root = insert(root, key, mean);
+                printf("Creating dictionary tree:\n");
+                root = create_tree();
                 break;
-
+    
             case 2:
-                printf("Enter keyword to delete: ");
-                scanf("%s", key);
-                root = delete(root, key);
+                printf("Enter keyword to insert: ");
+                scanf("%s", keyword);
+                getchar();
+                printf("Enter meaning: ");
+                fgets(meaning, sizeof(meaning), stdin);
+                meaning[strcspn(meaning, "\n")] = '\0'; // remove trailing newline
+                root = insert(root, keyword, meaning);
+                printf("Keyword inserted/updated.\n");
                 break;
-
+    
             case 3:
-                printf("\nDictionary (Sorted by Keyword):\n");
-                inorder(root);
+                printf("Enter keyword to delete: ");
+                scanf("%s", keyword);
+                root = delete_node(root, keyword);
+                printf("Keyword deleted if it existed.\n");
                 break;
-
+    
             case 4:
-                mirror(root);
-                printf("\nMirror Image Created.\n");
-                displayLevelWise(root);
+                printf("Enter keyword to search: ");
+                scanf("%s", keyword);
+                {
+                    char* found = search(root, keyword);
+                    if (found) {
+                        printf("Meaning: %s\n", found);
+                    } else {
+                        printf("Keyword not found.\n");
+                    }
+                }
                 break;
-
+    
             case 5:
-                copiedTree = copyTree(root);
-                printf("\nCopied Tree (Inorder):\n");
-                inorder(copiedTree);
+                printf("Dictionary contents (inorder traversal):\n");
+                print_tree(root);
                 break;
-
+            
             case 6:
-                displayLevelWise(root);
+                mirrortree(root);  // Pass root, not keyword
+                printf("Tree mirrored and printed.\n");
                 break;
-
-            case 0:
-                printf("Exiting...\n");
+    
+            case 7:
+                printf("Exiting program.\n");
                 break;
-
+    
             default:
-                printf("Invalid choice!\n");
+                printf("Invalid choice! Try again.\n");
+                break;
         }
-    } while (choice != 0);
 
-    return 0;
+    } while (choice != 7);  // Exit condition
+return 0;    
 }
