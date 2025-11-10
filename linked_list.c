@@ -53,7 +53,6 @@ void display(struct node* H) {
 int len(struct node* H) {
     int i = 0;
     struct node* curr= H->next;
-    if (H->next == NULL) return 0;
 
     while (curr != NULL) {
         i++;
@@ -107,11 +106,11 @@ void deleteByPos(struct node* H) {
     }
 
     struct node *prev = H, *curr = H->next;
-    int ctr = 1;
-    while (ctr < pos && curr != NULL) {
+    int i = 1;
+    while (i < pos && curr != NULL) {
         prev = curr;
         curr = curr->next;
-        ctr++;
+        i++;
     }
     prev->next = curr->next;
     curr->next= NULL;
